@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SC6019 区块链可扩展性刷题速记</title>
+  <style>
+    :root {
+      --ink: #18202a;
+      --muted: #637083;
+      --line: #d9e1ea;
+      --paper: #f7f8f5;
+      --panel: #ffffff;
+      --blue: #2457d6;
+      --green: #178066;
+      --red: #bd3b45;
+      --gold: #a56708;
+      --violet: #6d4bc3;
+      --shadow: 0 14px 40px rgba(26, 37, 55, 0.10);
+      --shadow-strong: 0 22px 60px rgba(26, 37, 55, 0.16);
+      --sidebar: clamp(350px, 24vw, 390px);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(36, 87, 214, 0.06), transparent 30%),
+        linear-gradient(180deg, #fbfaf4 0%, var(--paper) 55%, #f1f5f3 100%);
+      min-height: 100vh;
+    }
+
+    button, input { font: inherit; }
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+    button:hover { transform: translateY(-1px); border-color: #9fb2c8; box-shadow: 0 8px 18px rgba(32, 45, 66, .08); }
+    button:disabled { cursor: default; opacity: .55; transform: none; }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      border-right: 1px solid var(--line);
+      padding: 26px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      animation: fadeSlide .48s ease both;
+    }
+
+    main {
+      padding: 30px;
+      max-width: 1260px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeUp .5s ease .08s both;
+    }
+
+    .brand {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .brand h1 {
+      font-size: 22px;
+      line-height: 1.15;
+      margin: 0;
+      letter-spacing: 0;
+    }
+    .brand p {
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .memory-map {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .node {
+      min-height: 66px;
+      border-radius: 8px;
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: grid;
+      align-content: center;
+      gap: 2px;
+      box-shadow: 0 8px 18px rgba(31, 43, 61, .06);
+      animation: floatIn .46s ease both;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .node:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(31, 43, 61, .11); }
+    .node strong { font-size: 20px; line-height: 1; }
+    .node span { font-size: 12px; color: var(--muted); line-height: 1.25; }
+    .node:nth-child(1) { border-top: 4px solid var(--gold); }
+    .node:nth-child(2) { border-top: 4px solid var(--green); }
+    .node:nth-child(3) { border-top: 4px solid var(--blue); }
+    .node:nth-child(4) { border-top: 4px solid var(--violet); }
+    .node:nth-child(5) { border-top: 4px solid var(--red); }
+    .node:nth-child(2) { animation-delay: .04s; }
+    .node:nth-child(3) { animation-delay: .08s; }
+    .node:nth-child(4) { animation-delay: .12s; }
+    .node:nth-child(5) { animation-delay: .16s; }
+
+    .filters, .nav, .stats {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid rgba(217, 225, 234, .82);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .78);
+    }
+    .label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .seg {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .seg button.active, .nav button.active {
+      background: #17202c;
+      color: #fff;
+      border-color: #17202c;
+    }
+    .nav button {
+      text-align: left;
+      display: grid;
+      gap: 2px;
+      min-height: 52px;
+      align-content: center;
+    }
+    .nav small { color: inherit; opacity: .7; }
+
+    .stats {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .meter {
+      height: 8px;
+      border-radius: 999px;
+      background: #e4e9ef;
+      overflow: hidden;
+    }
+    .meter span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--green), var(--blue));
+      transition: width .38s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .hero-text {
+      padding: 24px 0;
+      min-height: 180px;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+    }
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 54px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+      max-width: 780px;
+    }
+    .diagram {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+      box-shadow: var(--shadow);
+      animation: fadeUp .55s ease .14s both;
+    }
+    .lane {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 10px;
+      align-items: center;
+      min-height: 38px;
+    }
+    .lane b { font-size: 13px; }
+    .bar {
+      height: 14px;
+      border-radius: 999px;
+      background: #e8edf2;
+      overflow: hidden;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      transform-origin: left center;
+      animation: growX .8s cubic-bezier(.18, .82, .18, 1) both;
+    }
+    .bar-a { width: 28%; background: var(--gold); }
+    .bar-b { width: 58%; background: var(--blue); }
+    .bar-c { width: 76%; background: var(--green); }
+    .bar-d { width: 68%; background: var(--violet); }
+    .bar-e { width: 52%; background: var(--red); }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    .danger {
+      color: var(--red);
+      border-color: rgba(189, 59, 69, .35);
+    }
+
+    .study-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(330px, 360px);
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .panel:hover { box-shadow: var(--shadow-strong); }
+    .quiz-panel { padding: 22px; }
+    .quiz-panel.question-pop { animation: questionPop .28s ease both; }
+    .side-panel { padding: 18px; display: grid; gap: 16px; }
+
+    .q-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .pill {
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eef3f8;
+      color: #344255;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .question {
+      font-size: 22px;
+      line-height: 1.45;
+      margin: 0 0 16px;
+      letter-spacing: 0;
+    }
+    .options {
+      display: grid;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .option {
+      width: 100%;
+      min-height: 48px;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: center;
+      border-radius: 8px;
+      background: #fff;
+      animation: optionIn .24s ease both;
+    }
+    .option:nth-child(2) { animation-delay: .03s; }
+    .option:nth-child(3) { animation-delay: .06s; }
+    .option:nth-child(4) { animation-delay: .09s; }
+    .option .mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: #edf2f6;
+      color: #526074;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .option.selected {
+      border-color: var(--blue);
+      background: #f2f6ff;
+      transform: translateX(4px);
+    }
+    .option.correct {
+      border-color: var(--green);
+      background: #effaf6;
+      animation: correctPulse .42s ease both;
+    }
+    .option.wrong {
+      border-color: var(--red);
+      background: #fff1f2;
+      animation: wrongShake .34s ease both;
+    }
+    .fill-input {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+    .fill-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(36, 87, 214, .12); }
+    .feedback {
+      border-left: 4px solid var(--line);
+      padding: 12px 14px;
+      background: #fbfcfd;
+      border-radius: 6px;
+      line-height: 1.65;
+      color: #334155;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.good { border-color: var(--green); }
+    .feedback.bad { border-color: var(--red); }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .memo-block h3, .wrong-block h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+    .memo {
+      display: grid;
+      gap: 8px;
+    }
+    .memo-line {
+      border-left: 4px solid var(--green);
+      padding: 8px 10px;
+      background: #f6fbf8;
+      border-radius: 6px;
+      line-height: 1.55;
+      font-size: 14px;
+      animation: fadeUp .28s ease both;
+    }
+    .wrong-list {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .wrong-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .cheatsheet {
+      margin-top: 18px;
+      padding: 18px;
+    }
+    .cheatsheet h3 { margin: 0 0 12px; }
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #354154;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .chip:hover { transform: translateY(-2px); border-color: #9fb2c8; background: #f8fbff; }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateX(-14px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(10px) scale(.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes growX {
+      from { transform: scaleX(.08); }
+      to { transform: scaleX(1); }
+    }
+
+    @keyframes optionIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes questionPop {
+      from { opacity: .72; transform: translateY(6px) scale(.995); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes correctPulse {
+      0% { transform: translateX(4px) scale(1); }
+      45% { transform: translateX(4px) scale(1.012); }
+      100% { transform: translateX(4px) scale(1); }
+    }
+
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(4px); }
+      25% { transform: translateX(0); }
+      50% { transform: translateX(7px); }
+      75% { transform: translateX(2px); }
+    }
+
+    @media (max-width: 920px) {
+      .app { grid-template-columns: 1fr; }
+      aside {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      main { padding: 18px; }
+      .hero, .study-grid { grid-template-columns: 1fr; }
+      .memory-map { grid-template-columns: repeat(5, minmax(56px, 1fr)); }
+      .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .nav .label { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 560px) {
+      aside, main { padding: 14px; }
+      .hero h2 { font-size: 32px; }
+      .question { font-size: 18px; }
+      .memory-map { grid-template-columns: repeat(3, 1fr); }
+      .seg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .nav { grid-template-columns: 1fr; }
+      .lane { grid-template-columns: 74px 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <h1>SC6019 速记刷题台</h1>
+        <p>基于 Lecture 07-11 Markdown 笔记整理：先记框架，再刷基础题，最后盯错题。</p>
+      </div>
+
+      <div class="memory-map" aria-label="五讲助记图">
+        <div class="node"><strong>基</strong><span>三难与瓶颈</span></div>
+        <div class="node"><strong>分</strong><span>L1 分片</span></div>
+        <div class="node"><strong>通</strong><span>通道/Plasma</span></div>
+        <div class="node"><strong>卷</strong><span>OP/ZK Rollup</span></div>
+        <div class="node"><strong>数</strong><span>DA/EVM/共识</span></div>
+      </div>
+
+      <div class="filters">
+        <div class="label">题型</div>
+        <div class="seg" id="typeFilters"></div>
+      </div>
+
+      <div class="nav">
+        <div class="label">章节</div>
+        <button class="active" data-lecture="all">全部章节<small>混合刷题</small></button>
+        <button data-lecture="L07">Lecture 07<small>可扩展性导论</small></button>
+        <button data-lecture="L08">Lecture 08<small>分片与互操作</small></button>
+        <button data-lecture="L09">Lecture 09<small>通道与 Plasma</small></button>
+        <button data-lecture="L10">Lecture 10<small>Rollup 与 ZK</small></button>
+        <button data-lecture="L11">Lecture 11<small>DA、EVM、共识</small></button>
+      </div>
+
+      <div class="stats">
+        <div><strong id="scoreText">0 / 0</strong> 已答正确</div>
+        <div class="meter"><span id="scoreBar"></span></div>
+        <div id="poolText">题库载入中</div>
+      </div>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <h2>基分通卷数，一遍抓住扩容主线</h2>
+          <p>口诀：基看三难，分靠分片，通把交易搬下链，卷把数据和证明交回 L1，数再补齐数据可用性、EVM 并行和共识边界。</p>
+        </div>
+        <div class="diagram" aria-label="课程主线图">
+          <div class="lane"><b>吞吐</b><div class="bar"><span class="bar-a"></span></div></div>
+          <div class="lane"><b>分片</b><div class="bar"><span class="bar-b"></span></div></div>
+          <div class="lane"><b>Layer 2</b><div class="bar"><span class="bar-c"></span></div></div>
+          <div class="lane"><b>Rollup</b><div class="bar"><span class="bar-d"></span></div></div>
+          <div class="lane"><b>DA/共识</b><div class="bar"><span class="bar-e"></span></div></div>
+        </div>
+      </section>
+
+      <div class="top-actions">
+        <button class="primary" id="shuffleBtn">随机下一题</button>
+        <button id="wrongOnlyBtn">只刷错题</button>
+        <button id="resetBtn" class="danger">清空进度</button>
+      </div>
+
+      <section class="study-grid">
+        <div class="panel quiz-panel">
+          <div class="q-head">
+            <span id="qMeta">准备开始</span>
+            <span class="pill" id="qType">题型</span>
+          </div>
+          <h3 class="question" id="qText">点击“随机下一题”开始刷题。</h3>
+          <div id="answerArea"></div>
+          <div class="feedback" id="feedback"></div>
+          <div class="controls">
+            <button class="primary" id="submitBtn">提交答案</button>
+            <button id="showBtn">看答案</button>
+            <button id="nextBtn">下一题</button>
+          </div>
+        </div>
+
+        <div class="panel side-panel">
+          <div class="memo-block">
+            <h3>本章助记</h3>
+            <div class="memo" id="memoList"></div>
+          </div>
+          <div class="wrong-block">
+            <h3>错题本</h3>
+            <div class="wrong-list" id="wrongList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel cheatsheet">
+        <h3>高频词一眼过</h3>
+        <div class="chips" id="chips"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const lectures = {
+      L07: {
+        title: "Lecture 07 可扩展性导论",
+        memo: [
+          "三难：去中心化、安全性、可扩展性，通常不能三者同时最大化。",
+          "TPS 不是全部：区块越大、出块越快，常会推高硬件门槛或增加分叉。",
+          "Gas 费用 = Gas used × Gas price；拥堵来自区块空间供不应求。"
+        ],
+        chips: ["TPS", "Gas", "Mempool", "Blockchain Trilemma", "CAP", "Ronin Sidechain", "Computational Integrity"]
+      },
+      L08: {
+        title: "Lecture 08 L1 分片与互操作",
+        memo: [
+          "分片口诀：分工并行，但要随机分配、周期洗牌、处理跨片原子性。",
+          "Beacon Chain 负责随机性、跨片协调和聚合；Shard Chain 做局部执行与共识。",
+          "互操作像状态分片：Cosmos Hub/Zone、Polkadot Relay/Parachain 都是多链协作。"
+        ],
+        chips: ["Sharding", "Beacon Chain", "Shard Key", "Cross-link", "VRF", "PBFT", "IBC", "Tendermint"]
+      },
+      L09: {
+        title: "Lecture 09 通道与 Plasma",
+        memo: [
+          "Layer 2 省钱靠摊薄：1 笔进场，很多笔链下更新，1 笔退出。",
+          "通道靠双方签名和最新状态；HTLC 靠哈希锁加时间锁做多跳支付。",
+          "Plasma 只把状态承诺放上链，用户要保存数据并在退出游戏中自证。"
+        ],
+        chips: ["State Channel", "Payment Channel", "Spilman", "Lightning", "HTLC", "Virtual Channel", "Commit-chain", "Plasma Cash"]
+      },
+      L10: {
+        title: "Lecture 10 Rollup 与 ZK",
+        memo: [
+          "OP Rollup：乐观执行，靠欺诈证明纠错，数据仍放 L1。",
+          "ZK Rollup：提交有效性证明，数学保证状态正确，退出通常更快。",
+          "Rollup 省 Gas：批处理、压缩、calldata，再到 EIP-4844 blobs。"
+        ],
+        chips: ["Optimistic Rollup", "Fraud Proof", "ZK Rollup", "Validity Proof", "SNARK", "STARK", "Cairo", "zkEVM", "Blobs"]
+      },
+      L11: {
+        title: "Lecture 11 DA、EVM 与共识扩展",
+        memo: [
+          "DA 问的不是数据对不对，而是数据是否真的可取得、可重建。",
+          "EVM 并行要知道读写集合；Block-STM 先乐观执行，再验证冲突。",
+          "容错边界要记牢：CFT 通常 n ≥ 2f+1，BFT 通常 n ≥ 3f+1。"
+        ],
+        chips: ["Data Availability", "DAS", "Erasure Coding", "Reed-Solomon", "CMT", "Celestia", "Block-STM", "HotStuff"]
+      }
+    };
+
+    const questions = [
+      {
+        id: "l07-1", lecture: "L07", type: "single",
+        q: "Lecture 07 中，朴素提高区块链吞吐量的公式是哪一个？",
+        options: ["吞吐量 = 每块交易数 / 出块间隔", "吞吐量 = Gas 价格 × 出块间隔", "吞吐量 = 节点数量 / 区块大小", "吞吐量 = 安全性 × 去中心化"],
+        answer: [0],
+        exp: "课件把区块链抽象成处理交易的服务，吞吐量常用每个区块可容纳交易数除以出块间隔来表达。"
+      },
+      {
+        id: "l07-2", lecture: "L07", type: "multi",
+        q: "关于直接增大区块或缩短出块时间，下列哪些风险是课件强调的？",
+        options: ["硬件和带宽要求上升", "可能降低去中心化程度", "缩短出块时间可能增加分叉", "一定会让安全性和去中心化同步提升"],
+        answer: [0, 1, 2],
+        exp: "朴素 TPS 扩容会带来资源门槛、分叉概率、确认稳定性等问题，不是免费午餐。"
+      },
+      {
+        id: "l07-3", lecture: "L07", type: "fill",
+        q: "以太坊中基础 ETH 转账的标准 Gas 用量通常是 ______ gas。",
+        answers: ["21000", "21,000", "21000 gas", "21,000 gas"],
+        exp: "课件中的例子使用 21,000 gas 作为基础 ETH 转账成本。"
+      },
+      {
+        id: "l07-4", lecture: "L07", type: "single",
+        q: "区块链三难困境的三个顶点是？",
+        options: ["吞吐、存储、隐私", "去中心化、安全性、可扩展性", "Gas、Mempool、区块大小", "PoW、PoS、PBFT"],
+        answer: [1],
+        exp: "三难困境讨论的是 Decentralization、Security、Scalability 的权衡。"
+      },
+      {
+        id: "l07-5", lecture: "L07", type: "multi",
+        q: "CryptoKitties 案例主要说明了哪些现象？",
+        options: ["热门应用会导致链上拥堵", "看似简单的游戏也会产生大量交易", "所有游戏逻辑都必须放到中心化服务器", "应用热度会转化为全网处理压力"],
+        answer: [0, 1, 3],
+        exp: "CryptoKitties 是应用驱动型拥堵的经典例子，交易需要由以太坊节点全局处理。"
+      },
+      {
+        id: "l07-6", lecture: "L07", type: "fill",
+        q: "交易费用公式：Transaction fee = Gas used × ______。",
+        answers: ["gas price", "Gas price", "gas价格", "gas 价格", "Gas 价格"],
+        exp: "费用由消耗的 Gas 数量和每单位 Gas 的价格共同决定。"
+      },
+      {
+        id: "l08-1", lecture: "L08", type: "single",
+        q: "分片的核心思想最接近下列哪项？",
+        options: ["让每个节点处理更多全网交易", "把交易处理划分到多个 shard 并行执行", "只增加区块大小", "删除共识协议"],
+        answer: [1],
+        exp: "分片是水平扩展：把交易、状态或数据划分到多个分片以并行处理。"
+      },
+      {
+        id: "l08-2", lecture: "L08", type: "multi",
+        q: "区块链分片相比传统数据库分片更困难，是因为它需要处理哪些问题？",
+        options: ["拜占庭故障", "Sybil 身份攻击", "对抗性网络环境", "完全可信的固定身份"],
+        answer: [0, 1, 2],
+        exp: "传统分片通常依赖可信基础设施；区块链分片必须在开放、对抗、可伪造身份的环境中工作。"
+      },
+      {
+        id: "l08-3", lecture: "L08", type: "fill",
+        q: "用于决定数据或请求进入哪个分片的索引字段称为 ______ key。",
+        answers: ["shard", "Shard", "分片", "shard key", "Shard key"],
+        exp: "Shard key 决定数据或交易路由到哪个分片。"
+      },
+      {
+        id: "l08-4", lecture: "L08", type: "single",
+        q: "在分片架构中，Beacon Chain 的典型职责不包括哪项？",
+        options: ["提供随机性", "协调跨分片交易", "聚合 cross-links", "替每个分片重新执行全部交易"],
+        answer: [3],
+        exp: "Beacon Chain 主要做协调、随机性、聚合和验证签名，不承担每个分片的完整执行。"
+      },
+      {
+        id: "l08-5", lecture: "L08", type: "multi",
+        q: "关于跨分片提交内容，下列说法正确的是？",
+        options: ["提交整个区块通常意味着只做交易分片", "只提交区块头可对应交易与状态分片", "状态分片中通常没有单一全局状态", "提交区块头会自动消除原子性问题"],
+        answer: [0, 1, 2],
+        exp: "区块头方案让数据和状态也被分片，但异步跨片交易仍需要原子性保障。"
+      },
+      {
+        id: "l08-6", lecture: "L08", type: "single",
+        q: "Cosmos 中用于跨链通信的协议通常称为？",
+        options: ["HTLC", "IBC", "EIP-4844", "FRI"],
+        answer: [1],
+        exp: "Cosmos Hub 与 Zone 之间依靠 IBC，即 Inter-Blockchain Communication。"
+      },
+      {
+        id: "l08-7", lecture: "L08", type: "fill",
+        q: "Tendermint 的投票流程可概括为 Propose → Prevote → ______ → Commit。",
+        answers: ["Precommit", "precommit", "预提交"],
+        exp: "Tendermint 是 BFT 风格状态机，典型步骤为提议、预投票、预提交、提交。"
+      },
+      {
+        id: "l09-1", lecture: "L09", type: "single",
+        q: "Layer 2 的基本吸引力来自哪种成本结构？",
+        options: ["每笔交易都必须完整上链", "1 笔进入、很多笔链下更新、1 笔退出", "完全不需要 Layer 1", "把所有用户资金托管给中心化交易所"],
+        answer: [1],
+        exp: "Layer 2 通过摊薄 L1 成本减少重复计算、Gas 成本和主链拥堵。"
+      },
+      {
+        id: "l09-2", lecture: "L09", type: "multi",
+        q: "通道型网络通常依赖哪些机制？",
+        options: ["链下签名状态更新", "最新状态优先", "争议时回到 L1 裁决", "每次状态变化都立即写入 L1 存储"],
+        answer: [0, 1, 2],
+        exp: "通道把高频交互放在线下，依靠签名、撤销或时间锁机制处理争议。"
+      },
+      {
+        id: "l09-3", lecture: "L09", type: "fill",
+        q: "HTLC 的中文常译是哈希______合约。",
+        answers: ["时间锁", "时间锁定", "时间锁合约"],
+        exp: "HTLC = Hash Time Lock Contract，即哈希时间锁合约。"
+      },
+      {
+        id: "l09-4", lecture: "L09", type: "single",
+        q: "Lightning Network 中多跳支付的关键是接收方先选择秘密 r，并公开其什么？",
+        options: ["私钥", "哈希 h = H(r)", "Gas price", "区块头"],
+        answer: [1],
+        exp: "HTLC 用秘密 r 和哈希 h=H(r) 形成条件支付，沿路径逐跳结算。"
+      },
+      {
+        id: "l09-5", lecture: "L09", type: "multi",
+        q: "Plasma MVP 中，用户通常需要承担哪些责任？",
+        options: ["保存与自己资产相关的数据", "在挑战期监控恶意退出", "必要时提交 Merkle proof", "完全不需要关注数据可用性"],
+        answer: [0, 1, 2],
+        exp: "Plasma 数据多在链下，安全性依赖用户或观察者及时发现并挑战错误退出。"
+      },
+      {
+        id: "l09-6", lecture: "L09", type: "single",
+        q: "Commit-chain 与 Sharding 的一个核心区别是？",
+        options: ["Commit-chain 通常是 L2 向 L1 提交承诺", "Sharding 完全不需要共识", "Commit-chain 一定没有验证者", "Sharding 只能用于支付通道"],
+        answer: [0],
+        exp: "Commit-chain 是单独链或系统定期向 L1 提交状态承诺；分片是 L1 内部的并行化结构。"
+      },
+      {
+        id: "l10-1", lecture: "L10", type: "single",
+        q: "Optimistic Rollup 的核心安全机制是？",
+        options: ["默认拒绝所有交易", "有效性证明", "欺诈证明和挑战期", "只使用中心化数据库"],
+        answer: [2],
+        exp: "OP Rollup 乐观假设状态转换正确，若有人挑战则通过欺诈证明裁决。"
+      },
+      {
+        id: "l10-2", lecture: "L10", type: "multi",
+        q: "OP Rollup 的常见特点包括哪些？",
+        options: ["数据发布到 L1 以保证 DA", "提现通常需要等待挑战期", "更容易兼容 EVM 通用计算", "无需任何在线监控假设"],
+        answer: [0, 1, 2],
+        exp: "OP 的弱点之一是需要观察者或用户监控，提现常因争议窗口较慢。"
+      },
+      {
+        id: "l10-3", lecture: "L10", type: "single",
+        q: "ZK Rollup 用什么证明新状态根是正确的？",
+        options: ["Validity proof", "Fraud proof", "Nakamoto proof", "Shard key"],
+        answer: [0],
+        exp: "ZK Rollup 使用 zkSNARK/zkSTARK 等有效性证明。"
+      },
+      {
+        id: "l10-4", lecture: "L10", type: "fill",
+        q: "在提交链设计空间中，“数据上链 + 欺诈证明”对应 ______ Rollup。",
+        answers: ["Optimistic", "optimistic", "OP", "op", "乐观", "乐观 Rollup", "Optimistic Rollup"],
+        exp: "数据上链保证 DA，欺诈证明保证状态有效性，这一格是 Optimistic Rollup。"
+      },
+      {
+        id: "l10-5", lecture: "L10", type: "multi",
+        q: "L2 节省 Gas 的常见方法包括哪些？",
+        options: ["批处理交易", "压缩交易数据", "使用 calldata 或 blobs 发布数据", "把 L1 状态存储当作主要数据通道"],
+        answer: [0, 1, 2],
+        exp: "批处理、压缩、calldata、EIP-4844 blobs 都是降低 L1 数据成本的路径。"
+      },
+      {
+        id: "l10-6", lecture: "L10", type: "single",
+        q: "关于 STARK 与 SNARK，课件中的对比哪项正确？",
+        options: ["STARK 通常需要 trusted setup", "SNARK 证明大小通常比 STARK 小", "STARK 一定不透明", "SNARK 一定抗量子"],
+        answer: [1],
+        exp: "课件对比中，SNARK 证明非常小，但通常需要 trusted setup；STARK 证明较大、透明、抗量子。"
+      },
+      {
+        id: "l10-7", lecture: "L10", type: "fill",
+        q: "Cairo 之于 StarkNet，大致类似 ______ 之于 Ethereum。",
+        answers: ["Solidity", "solidity"],
+        exp: "Cairo 是面向 STARK 证明友好的语言，类比以太坊生态的 Solidity。"
+      },
+      {
+        id: "l11-1", lecture: "L11", type: "single",
+        q: "数据可用性 DA 主要关心什么？",
+        options: ["交易是否一定盈利", "区块数据是否可被取得和重建", "Gas 价格是否固定", "验证者是否都使用同一电脑"],
+        answer: [1],
+        exp: "DA 关注的是数据是否真实发布并足以让节点重建状态，而不仅是状态根是否存在。"
+      },
+      {
+        id: "l11-2", lecture: "L11", type: "multi",
+        q: "数据可用性扩展中常见的技术包括哪些？",
+        options: ["纠删码", "Reed-Solomon 编码", "数据可用性抽样 DAS", "完全隐藏所有区块数据"],
+        answer: [0, 1, 2],
+        exp: "纠删码、RS 编码和抽样让轻客户端以较小成本获得高概率的数据可用性保证。"
+      },
+      {
+        id: "l11-3", lecture: "L11", type: "fill",
+        q: "Celestia 常被视为面向 Rollup 的模块化 ______ 层。",
+        answers: ["数据可用性", "DA", "da", "Data Availability", "data availability"],
+        exp: "Celestia 的核心定位是提供模块化数据可用性与共识层。"
+      },
+      {
+        id: "l11-4", lecture: "L11", type: "single",
+        q: "EVM 顺序执行难以扩展的一个原因是？",
+        options: ["所有交易天然互不冲突", "状态读写依赖导致并行化困难", "智能合约不能读取状态", "EVM 没有栈"],
+        answer: [1],
+        exp: "并行执行需要知道交易读写集合，冲突交易不能随意并行。"
+      },
+      {
+        id: "l11-5", lecture: "L11", type: "multi",
+        q: "Block-STM 的核心思路包括哪些？",
+        options: ["乐观并行执行", "记录读写集合", "验证冲突并重新执行有冲突交易", "要求开发者完全手动排序所有交易"],
+        answer: [0, 1, 2],
+        exp: "Block-STM 使用软件事务内存思想：先并行执行，再验证依赖冲突，必要时重跑。"
+      },
+      {
+        id: "l11-6", lecture: "L11", type: "single",
+        q: "BFT 共识常见的拜占庭容错节点规模条件是？",
+        options: ["n ≥ f + 1", "n ≥ 2f + 1", "n ≥ 3f + 1", "n = f"],
+        answer: [2],
+        exp: "经典 BFT 模型通常要求 n ≥ 3f + 1 才能容忍 f 个拜占庭故障。"
+      },
+      {
+        id: "l11-7", lecture: "L11", type: "fill",
+        q: "HotStuff 这类协议属于 ______ Fault Tolerance 共识家族。",
+        answers: ["Byzantine", "byzantine", "BFT", "bft", "拜占庭容错", "拜占庭"],
+        exp: "HotStuff 是典型 BFT 共识协议，强调投票、QC 和流水线化。"
+      }
+    ];
+
+    const typeLabels = { single: "单选", multi: "多选", fill: "填空" };
+    const typeButtons = [
+      ["all", "全部"], ["single", "单选"], ["multi", "多选"], ["fill", "填空"]
+    ];
+
+    let state = JSON.parse(localStorage.getItem("sc6019-progress") || "{}");
+    if (!state.done) state = { done: {}, wrong: {}, currentLecture: "all", currentType: "all", wrongOnly: false };
+    let current = null;
+    let selected = new Set();
+    let answered = false;
+
+    const $ = (id) => document.getElementById(id);
+    const normalize = (s) => String(s).trim().replace(/\s+/g, " ").toLowerCase();
+
+    function save() {
+      localStorage.setItem("sc6019-progress", JSON.stringify(state));
+    }
+
+    function initFilters() {
+      $("typeFilters").innerHTML = typeButtons.map(([key, label]) =>
+        `<button data-type="${key}" class="${key === state.currentType ? "active" : ""}">${label}</button>`
+      ).join("");
+      $("typeFilters").querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.currentType = btn.dataset.type;
+          state.wrongOnly = false;
+          save();
+          refreshActive();
+          pickQuestion();
+        });
+      });
+
+      document.querySelectorAll(".nav button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.currentLecture = btn.dataset.lecture;
+          state.wrongOnly = false;
+          save();
+          refreshActive();
+          pickQuestion();
+        });
+      });
+    }
+
+    function pool() {
+      return questions.filter(q => {
+        const lectureOk = state.currentLecture === "all" || q.lecture === state.currentLecture;
+        const typeOk = state.currentType === "all" || q.type === state.currentType;
+        const wrongOk = !state.wrongOnly || state.wrong[q.id];
+        return lectureOk && typeOk && wrongOk;
+      });
+    }
+
+    function refreshActive() {
+      document.querySelectorAll(".nav button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.lecture === state.currentLecture);
+      });
+      $("typeFilters").querySelectorAll("button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.type === state.currentType);
+      });
+      $("wrongOnlyBtn").classList.toggle("primary", state.wrongOnly);
+      updateMemo();
+      updateStats();
+    }
+
+    function updateStats() {
+      const doneEntries = Object.values(state.done);
+      const totalDone = doneEntries.length;
+      const correct = doneEntries.filter(Boolean).length;
+      const pct = totalDone ? Math.round(correct / totalDone * 100) : 0;
+      $("scoreText").textContent = `${correct} / ${totalDone}`;
+      $("scoreBar").style.width = `${pct}%`;
+      $("poolText").textContent = `当前题池 ${pool().length} 题，错题 ${Object.keys(state.wrong).length} 题`;
+      renderWrongList();
+    }
+
+    function updateMemo() {
+      const keys = state.currentLecture === "all" ? Object.keys(lectures) : [state.currentLecture];
+      const memo = keys.flatMap(k => lectures[k].memo.slice(0, state.currentLecture === "all" ? 1 : 3));
+      $("memoList").innerHTML = memo.map(line => `<div class="memo-line">${line}</div>`).join("");
+      const chips = keys.flatMap(k => lectures[k].chips);
+      $("chips").innerHTML = [...new Set(chips)].map(c => `<span class="chip">${c}</span>`).join("");
+    }
+
+    function renderWrongList() {
+      const wrongIds = Object.keys(state.wrong);
+      if (!wrongIds.length) {
+        $("wrongList").innerHTML = `<div class="wrong-item">目前没有错题。保持这个节奏。</div>`;
+        return;
+      }
+      $("wrongList").innerHTML = wrongIds.map(id => {
+        const q = questions.find(item => item.id === id);
+        if (!q) return "";
+        return `<button class="wrong-item" data-jump="${q.id}"><strong>${lectures[q.lecture].title}</strong><br>${q.q}</button>`;
+      }).join("");
+      $("wrongList").querySelectorAll("[data-jump]").forEach(btn => {
+        btn.addEventListener("click", () => renderQuestion(questions.find(q => q.id === btn.dataset.jump)));
+      });
+    }
+
+    function pickQuestion() {
+      const list = pool();
+      if (!list.length) {
+        current = null;
+        $("qMeta").textContent = "没有符合筛选条件的题";
+        $("qType").textContent = "空";
+        $("qText").textContent = state.wrongOnly ? "错题池为空。可以关闭“只刷错题”继续练习。" : "当前筛选没有题目。";
+        $("answerArea").innerHTML = "";
+        $("feedback").className = "feedback";
+        return;
+      }
+      const unseen = list.filter(q => state.done[q.id] === undefined);
+      const source = unseen.length ? unseen : list;
+      renderQuestion(source[Math.floor(Math.random() * source.length)]);
+    }
+
+    function renderQuestion(q) {
+      current = q;
+      selected = new Set();
+      answered = false;
+      const quizPanel = document.querySelector(".quiz-panel");
+      quizPanel.classList.remove("question-pop");
+      void quizPanel.offsetWidth;
+      quizPanel.classList.add("question-pop");
+      $("qMeta").textContent = `${lectures[q.lecture].title} · ${q.id}`;
+      $("qType").textContent = typeLabels[q.type];
+      $("qText").textContent = q.q;
+      $("feedback").className = "feedback";
+      $("feedback").textContent = "";
+
+      if (q.type === "fill") {
+        $("answerArea").innerHTML = `<input class="fill-input" id="fillAnswer" placeholder="输入关键词或数值">`;
+        $("fillAnswer").addEventListener("keydown", e => {
+          if (e.key === "Enter") checkAnswer();
+        });
+      } else {
+        $("answerArea").innerHTML = `<div class="options">${q.options.map((opt, i) => `
+          <button class="option" data-opt="${i}">
+            <span class="mark">${String.fromCharCode(65 + i)}</span>
+            <span>${opt}</span>
+          </button>
+        `).join("")}</div>`;
+        $("answerArea").querySelectorAll(".option").forEach(btn => {
+          btn.addEventListener("click", () => {
+            if (answered) return;
+            const idx = Number(btn.dataset.opt);
+            if (q.type === "single") {
+              selected = new Set([idx]);
+            } else {
+              selected.has(idx) ? selected.delete(idx) : selected.add(idx);
+            }
+            paintSelection();
+          });
+        });
+      }
+      updateStats();
+    }
+
+    function paintSelection() {
+      document.querySelectorAll(".option").forEach(btn => {
+        btn.classList.toggle("selected", selected.has(Number(btn.dataset.opt)));
+      });
+    }
+
+    function correctText(q) {
+      if (q.type === "fill") return q.answers[0];
+      return q.answer.map(i => `${String.fromCharCode(65 + i)}. ${q.options[i]}`).join("；");
+    }
+
+    function isCorrect() {
+      if (!current) return false;
+      if (current.type === "fill") {
+        const value = normalize($("fillAnswer")?.value || "");
+        return current.answers.map(normalize).includes(value);
+      }
+      const ans = [...current.answer].sort().join(",");
+      const got = [...selected].sort().join(",");
+      return ans === got;
+    }
+
+    function checkAnswer(showOnly = false) {
+      if (!current) return;
+      answered = true;
+      const ok = showOnly ? false : isCorrect();
+
+      if (current.type !== "fill") {
+        document.querySelectorAll(".option").forEach(btn => {
+          const idx = Number(btn.dataset.opt);
+          btn.classList.toggle("correct", current.answer.includes(idx));
+          btn.classList.toggle("wrong", selected.has(idx) && !current.answer.includes(idx));
+        });
+      }
+
+      if (!showOnly) {
+        state.done[current.id] = ok;
+        if (ok) delete state.wrong[current.id];
+        else state.wrong[current.id] = true;
+        save();
+      }
+
+      $("feedback").className = `feedback show ${ok ? "good" : "bad"}`;
+      $("feedback").innerHTML = `${ok ? "答对了。" : "正确答案："}${ok ? "" : `<strong>${correctText(current)}</strong>`}<br>${current.exp}`;
+      updateStats();
+    }
+
+    $("submitBtn").addEventListener("click", () => checkAnswer(false));
+    $("showBtn").addEventListener("click", () => checkAnswer(true));
+    $("nextBtn").addEventListener("click", pickQuestion);
+    $("shuffleBtn").addEventListener("click", pickQuestion);
+    $("wrongOnlyBtn").addEventListener("click", () => {
+      state.wrongOnly = !state.wrongOnly;
+      save();
+      refreshActive();
+      pickQuestion();
+    });
+    $("resetBtn").addEventListener("click", () => {
+      if (!confirm("确定清空答题进度和错题本？")) return;
+      state.done = {};
+      state.wrong = {};
+      state.wrongOnly = false;
+      save();
+      refreshActive();
+      pickQuestion();
+    });
+
+    initFilters();
+    refreshActive();
+    pickQuestion();
+  </script>
+</body>
+</html>
